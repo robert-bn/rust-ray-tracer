@@ -22,7 +22,7 @@ pub fn intersects(sphere: &Sphere, ray: &Ray<f64>) -> bool {
 
 
 impl Object for Sphere {
-    fn intersection(&self, ray: &Ray<f64>) -> Option<Vec3<f64>> {
+    fn intersection(&self, ray: &Ray<f64>) -> Option<f64> {
         let v_origin_centre = ray.origin - self.centre;
     
         let a = ray.direction.length_squared();
@@ -58,7 +58,7 @@ impl Object for Sphere {
                 (false, false) => return None,
             };
         
-        Some(ray.at(t))
+        Some(t)
     }
 
     fn normal(&self, intersection: &Vec3<f64>) -> Vec3<f64> {

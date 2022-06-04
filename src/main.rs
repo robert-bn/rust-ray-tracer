@@ -17,11 +17,21 @@ fn div_by(x:i32) -> impl Fn(i32) -> f64 + 'static {
 fn ray_colour(r: Ray<f64>, environment: &Vec<Box<dyn Object>>) -> Color {
     // check if ray intersects an object in the environment
     // Note that we return the first intersection found. This assumes there are no overlapping objects
-    for n in
-        environment.iter()
-            .map(|obj| obj.intersection(&r)
-            .map(|intersection| obj.normal(&intersection)))
-            .flatten() {
+    let mut ts: Vec<(f64, &Box<dyn Object>)> =
+        environment
+            .iter()
+            .flat_map(|obj| { 
+                let t = obj.intersection(&r)?;
+                Some(()).filter(|()| t >= 0.0)?;
+                Some((t,obj))
+            })
+            .collect();
+
+    ts.sort_by(|(x,_), (y,_)| f64::partial_cmp(&x,&y).expect("Couldn't sort f64 in ts"));
+
+    for (t, obj) in ts {
+        let intersection = r.at(t);
+        let n = obj.normal(&intersection);
         return Color::from_unit(n);
     }
 
@@ -55,7 +65,7 @@ fn main() {
     let environment: Vec<Box<dyn Object>> =
         vec![ Box::new(Sphere { radius: 0.3, centre: Vec3::new(-0.4, 0.0, -1.0) })
             , Box::new(Sphere { radius: 0.3, centre: Vec3::new( 0.4, 0.0, -1.0) })
-            , Box::new(Plane::new(unit::Y, -1.0))
+            , Box::new(Plane::new(unit::Y, -0.1))
             ];
 
     println!("P3\n{} {}\n255\n", image_width, image_height);
