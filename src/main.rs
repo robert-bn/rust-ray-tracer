@@ -3,6 +3,7 @@ mod vec3;
 mod ray;
 mod sphere;
 mod object;
+mod plane;
 
 use color::*;
 use vec3::*;
@@ -33,6 +34,7 @@ fn ray_colour(r: Ray<f64>, environment: &Vec<Box<dyn Object>>) -> Color {
 
 fn main() {
     use sphere::*;
+    use plane::*;
 
     let aspect_ratio = 16.0/9.0;
     let image_width  = 700;
@@ -53,6 +55,7 @@ fn main() {
     let environment: Vec<Box<dyn Object>> =
         vec![ Box::new(Sphere { radius: 0.3, centre: Vec3::new(-0.4, 0.0, -1.0) })
             , Box::new(Sphere { radius: 0.3, centre: Vec3::new( 0.4, 0.0, -1.0) })
+            , Box::new(Plane::new(unit::Y, -1.0))
             ];
 
     println!("P3\n{} {}\n255\n", image_width, image_height);
