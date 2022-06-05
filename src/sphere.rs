@@ -50,15 +50,11 @@ impl Object for Sphere {
         // In this case we want the positive intersection which should be IN FRONT of the
         // camera, and the negative one behind it.
     
-        let t =
-            match (t_0 > 0.0, t_1 > 0.0) {
-                (true, true)   => f64::min(t_0,t_1),
-                (true, false)  => t_0,
-                (false, true)  => t_1,
-                (false, false) => return None,
-            };
-        
-        Some(t)
+        match (t_0 > 0.0, t_1 > 0.0) {
+            (true, _)      => Some(t_0),
+            (false, true)  => Some(t_1),
+            (false, false) => None,
+        }
     }
 
     fn normal(&self, intersection: &Vec3<f64>) -> Vec3<f64> {
