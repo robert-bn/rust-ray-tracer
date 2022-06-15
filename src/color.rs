@@ -1,4 +1,4 @@
-use std::ops::Add;
+use std::ops::{Add, AddAssign};
 
 use crate::vec3::Vec3;
 
@@ -16,11 +16,15 @@ impl Color {
     }
     
     pub fn write_color(&self) {
-        let ir = (self.0.x * 255.0).round() as u8;
-        let ig = (self.0.z * 255.0).round() as u8;
-        let ib = (self.0.y * 255.0).round() as u8;
+        fn clamp(x: f64) -> f64 {
+            if x > 1.0 { 1.0 } else { x }
+        }
+
+        let ir = (clamp(self.0.x) * 255.0).round() as u8;
+        let ig = (clamp(self.0.z) * 255.0).round() as u8;
+        let ib = (clamp(self.0.y) * 255.0).round() as u8;
         
-    println!("{} {} {}", ir, ig, ib)
+        println!("{} {} {}", ir, ig, ib)
     }
 
     pub fn scale(&self, scale_factor: f64) -> Self {
@@ -40,6 +44,15 @@ impl Add for Color {
         Color(self.0 + other.0)
     }
 }
+
+
+impl AddAssign for Color
+{
+    fn add_assign(&mut self, other: Self) {
+        self.0 += other.0;
+    }
+}
+
 
 pub const WHITE: Color = Color::new(1.0,1.0,1.0);
 pub const BLACK: Color = Color::new(0.0,0.0,0.0);
