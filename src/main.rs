@@ -16,10 +16,6 @@ use camera::*;
 use std::fs::File;
 use std::io::{prelude::*, BufWriter};
 
-fn div_by(x:i32) -> impl Fn(i32) -> f64 + 'static {
-    move |y: i32| (y as f64 / x as f64)
-}
-
 fn ray_colour(r: Ray<f64>, environment: &Vec<Box<dyn Object>>) -> Color {
     // check if ray intersects an object in the environment
     // Note that we return the first intersection found. This assumes there are no overlapping objects
@@ -48,6 +44,10 @@ fn ray_colour(r: Ray<f64>, environment: &Vec<Box<dyn Object>>) -> Color {
 }
 
 fn render<T: Write>(image_width: i32, samples_per_pixel: i32, camera: &Camera, environment: &Vec<Box<dyn Object>>, output: &mut T) -> std::io::Result<()> {
+    fn div_by(x:i32) -> impl Fn(i32) -> f64 + 'static {
+        move |y: i32| (y as f64 / x as f64)
+    }
+
     let image_height = (image_width as f64 / camera.aspect_ratio) as i32;
 
     let mut gen = rand_pcg::Pcg64Mcg::new(0xcafef00dd15ea5e5);
