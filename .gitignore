@@ -1,2 +1,4 @@
 /image.ppm
 /target
+/debug
+Cargo.lock
