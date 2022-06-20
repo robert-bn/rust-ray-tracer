@@ -1,10 +1,29 @@
+use rand::Rng;
+
 use crate::ray::*;
 use crate::vec3::*;
+use crate::color::*;
 
 #[derive(Debug)]
-pub enum Material {
-    Mirror,
-    Diffuse
+pub struct Material {
+    pub reflection_prob: f64,
+    // pub scatter_prob: f64,
+    pub absorb: Color
+}
+
+pub enum Interaction {
+    Scatter,
+    Reflect
+}
+
+impl Material {
+    pub fn interact<R: Rng>(&self, rng: &mut R) -> Interaction {
+        if self.reflection_prob > 0.0 && rng.gen::<f64>() < self.reflection_prob {
+            Interaction::Reflect
+        } else {
+            Interaction::Scatter
+        }
+    }
 }
 
 pub trait Object {

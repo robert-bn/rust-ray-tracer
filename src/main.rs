@@ -18,12 +18,13 @@ use std::io::{prelude::*, BufWriter};
 
 
 
-const MAX_BOUNCES: u64 = 50;
-const IMAGE_WIDTH: u64 = 1000;
+const MAX_BOUNCES: u64 = 16;
+const IMAGE_WIDTH: u64 = 600;
 const SAMPLES_PER_PIXEL: u64 = 100;
+const FLOATING_POINT_TOLERANCE: f64 = 0.0001;
 
 
-fn ray_colour<R: Rng>(r: Ray<f64>, environment: &Vec<Box<dyn Object>>, depth: u64, rng: &mut R) -> Color {
+fn ray_colour<R: Rng>(incoming_ray: Ray<f64>, environment: &Vec<Box<dyn Object>>, depth: u64, rng: &mut R) -> Color {
     fn scatter<R: Rng>(intersection: Vec3<f64>, unit_normal: Vec3<f64>, rng: &mut R) -> Ray<f64> {
         let scatter_direction = unit_normal + unit::random(rng);
         Ray { origin: intersection, direction: scatter_direction }
@@ -41,21 +42,26 @@ fn ray_colour<R: Rng>(r: Ray<f64>, environment: &Vec<Box<dyn Object>>, depth: u6
 
     let hit: Option<(f64, &Box<dyn Object>)> = environment
         .iter()
-        .flat_map(|obj| obj.intersection(&r).and_then(|t| (t >= 0.001 /* Shadow acne */).then(|| (t,obj))))
+        .flat_map(|obj| obj.intersection(&incoming_ray).and_then(|t| (t >= FLOATING_POINT_TOLERANCE /* Shadow acne */).then(|| (t,obj))))
         .min_by(|(x,_), (y,_)| f64::partial_cmp(&x,&y).expect("Couldn't sort f64 in hits"));
 
     match hit {
         Some((t, obj)) => {
-            let intersection = r.at(t);
+            let intersection = incoming_ray.at(t);
             let n = obj.normal(&intersection);
-            let new_ray = match obj.material() {
-                Material::Mirror => reflect(intersection, n, r),
-                Material::Diffuse => scatter(intersection, n, rng),
-            };
-            ray_colour(new_ray, environment, depth - 1, rng).on_vec(|v| v / 2.0)
+            match obj.material().interact(rng) {
+                Interaction::Reflect => {
+                    let outgoing_ray = reflect(intersection, n, incoming_ray);
+                    ray_colour(outgoing_ray, environment, depth - 1, rng)
+                },
+                Interaction::Scatter => {
+                    let outgoing_ray = scatter(intersection, n, rng);
+                    ray_colour(outgoing_ray, environment, depth - 1, rng).absorb(&obj.material().absorb)
+                }
+            }
         },
         None => {
-            let direction = unit::in_direction(r.direction);
+            let direction = unit::in_direction(incoming_ray.direction);
             let t = (1.0 + direction.y)/2.0;
             gradient(WHITE, Color::new(0.5,0.7,1.0), t)
         }
@@ -112,7 +118,7 @@ fn render<T: Write>(
 
 fn main() -> std::io::Result<()> {
     use sphere::*;
-    use plane::*;
+    // use plane::*;
     use camera::*;
 
     let camera = default_camera();
@@ -122,9 +128,10 @@ fn main() -> std::io::Result<()> {
     let mut file_writer = BufWriter::new(file);
     
     let environment: Vec<Box<dyn Object>> =
-    vec![ Box::new(Sphere { radius: 0.5, centre: Vec3::new(-0.5, 0.0, -1.0), material: Material::Mirror })
-        , Box::new(Sphere { radius: 0.5, centre: Vec3::new(0.5, 0.0, -1.0), material: Material::Diffuse })
-        , Box::new(Sphere { radius: 100.0, centre: Vec3::new( 0.0, -100.5, -1.0), material: Material::Diffuse })
+    vec![ Box::new(Sphere { radius: 0.5,   centre: Vec3::new(-0.5,    0.0, -1.0), material: Material { reflection_prob: 0.8,   /* scatter_prob: 0.0, */ absorb: GREY_50   } })
+        , Box::new(Sphere { radius: 0.5,   centre: Vec3::new( 0.5,    0.0, -1.0), material: Material { reflection_prob: 0.0, /* scatter_prob: 1.0, */ absorb: Color::from_absorbtion(0.3,0.8,0.8) } })
+        , Box::new(Sphere { radius: 0.17,   centre: Vec3::new( 0.0,   -0.35, -0.69), material: Material { reflection_prob: 0.4, /* scatter_prob: 1.0, */ absorb: Color::from_absorbtion(0.9,0.6,0.9) } })
+        , Box::new(Sphere { radius: 100.0, centre: Vec3::new( 0.0, -100.5, -1.0), material: Material { reflection_prob: 0.0, /* scatter_prob: 1.0, */ absorb: GREY_50 } })
         // , Box::new(Plane::new(unit::Y, -0.1))
         ];
     
