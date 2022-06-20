@@ -1,5 +1,3 @@
-use std::cmp::Ordering;
-
 use crate::vec3::*;
 use crate::ray::*;
 use crate::object::*;
