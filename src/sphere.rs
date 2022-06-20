@@ -7,7 +7,8 @@ use crate::object::*;
 #[derive(Debug)]
 pub struct Sphere {
     pub radius: f64,
-    pub centre: Vec3<f64>
+    pub centre: Vec3<f64>,
+    pub material: Material
 }
 
 pub fn intersects(sphere: &Sphere, ray: &Ray<f64>) -> bool {
@@ -60,6 +61,10 @@ impl Object for Sphere {
     fn normal(&self, intersection: &Vec3<f64>) -> Vec3<f64> {
         let sphere_center_to_intersection = *intersection - self.centre;
         unit::in_direction(sphere_center_to_intersection)
+    }
+
+    fn material(&self) -> &Material {
+        &self.material
     }
 }
 

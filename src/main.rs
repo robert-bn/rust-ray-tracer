@@ -19,11 +19,20 @@ use std::io::{prelude::*, BufWriter};
 
 
 const MAX_BOUNCES: u64 = 50;
-const IMAGE_WIDTH: u64 = 400;
+const IMAGE_WIDTH: u64 = 1000;
 const SAMPLES_PER_PIXEL: u64 = 100;
 
 
 fn ray_colour<R: Rng>(r: Ray<f64>, environment: &Vec<Box<dyn Object>>, depth: u64, rng: &mut R) -> Color {
+    fn scatter<R: Rng>(intersection: Vec3<f64>, unit_normal: Vec3<f64>, rng: &mut R) -> Ray<f64> {
+        let scatter_direction = unit_normal + unit::random(rng);
+        Ray { origin: intersection, direction: scatter_direction }
+    }
+
+    fn reflect(intersection: Vec3<f64>, unit_normal: Vec3<f64>, incoming_ray: Ray<f64>) -> Ray<f64> {
+        let reflected_direction = incoming_ray.direction - (unit_normal * 2.0 * incoming_ray.direction.dot(&unit_normal));
+        Ray { origin: intersection, direction: reflected_direction }
+    }
     // check if ray intersects an object in the environment
     // Note that we return the first intersection found. This assumes there are no overlapping objects
 
@@ -39,8 +48,10 @@ fn ray_colour<R: Rng>(r: Ray<f64>, environment: &Vec<Box<dyn Object>>, depth: u6
         Some((t, obj)) => {
             let intersection = r.at(t);
             let n = obj.normal(&intersection);
-            let scatter_direction = n + unit::random(rng);
-            let new_ray = Ray { origin: intersection, direction: scatter_direction };
+            let new_ray = match obj.material() {
+                Material::Mirror => reflect(intersection, n, r),
+                Material::Diffuse => scatter(intersection, n, rng),
+            };
             ray_colour(new_ray, environment, depth - 1, rng).on_vec(|v| v / 2.0)
         },
         None => {
@@ -111,8 +122,9 @@ fn main() -> std::io::Result<()> {
     let mut file_writer = BufWriter::new(file);
     
     let environment: Vec<Box<dyn Object>> =
-    vec![ Box::new(Sphere { radius: 0.5, centre: Vec3::new(0.0, 0.0, -1.0) })
-        , Box::new(Sphere { radius: 100.0, centre: Vec3::new( 0.0, -100.5, -1.0) })
+    vec![ Box::new(Sphere { radius: 0.5, centre: Vec3::new(-0.5, 0.0, -1.0), material: Material::Mirror })
+        , Box::new(Sphere { radius: 0.5, centre: Vec3::new(0.5, 0.0, -1.0), material: Material::Diffuse })
+        , Box::new(Sphere { radius: 100.0, centre: Vec3::new( 0.0, -100.5, -1.0), material: Material::Diffuse })
         // , Box::new(Plane::new(unit::Y, -0.1))
         ];
     

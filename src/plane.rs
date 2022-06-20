@@ -2,14 +2,16 @@ use crate::vec3::*;
 use crate::object::*;
 use crate::ray::*;
 
+#[derive(Debug)]
 pub struct Plane {
     unit_normal: Vec3<f64>,
-    pub origin_distance: f64
+    pub origin_distance: f64,
+    material: Material
 }
 
 impl Plane {
-    pub fn new(normal: Vec3<f64>, origin_distance: f64) -> Self {
-        Plane { unit_normal: unit::in_direction(normal), origin_distance }
+    pub fn new(normal: Vec3<f64>, origin_distance: f64, material: Material) -> Self {
+        Plane { unit_normal: unit::in_direction(normal), origin_distance, material }
     }
 }
 
@@ -23,5 +25,9 @@ impl Object for Plane {
 
     fn normal(&self, _intersection: &Vec3<f64>) -> Vec3<f64> {
         self.unit_normal
+    }
+
+    fn material(&self) -> &Material {
+        &self.material
     }
 }
