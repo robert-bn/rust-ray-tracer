@@ -32,7 +32,7 @@ fn ray_colour<R: Rng>(r: Ray<f64>, environment: &Vec<Box<dyn Object>>, depth: u6
 
     let hit: Option<(f64, &Box<dyn Object>)> = environment
         .iter()
-        .flat_map(|obj| obj.intersection(&r).and_then(|t| (t >= 0.0).then(|| (t,obj))))
+        .flat_map(|obj| obj.intersection(&r).and_then(|t| (t >= 0.001 /* Shadow acne */).then(|| (t,obj))))
         .min_by(|(x,_), (y,_)| f64::partial_cmp(&x,&y).expect("Couldn't sort f64 in hits"));
 
     match hit {
