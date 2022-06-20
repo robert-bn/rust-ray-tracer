@@ -15,7 +15,7 @@ impl Color {
         Color::new(n.x + 1.0, n.y + 1.0, n.z + 1.0).scale(0.5)
     }
     
-    pub fn write_color(&self) {
+    pub fn write_color(&self) -> String {
         fn clamp(x: f64) -> f64 {
             if x > 1.0 { 1.0 } else { x }
         }
@@ -23,8 +23,8 @@ impl Color {
         let ir = (clamp(self.0.x) * 255.0).round() as u8;
         let ig = (clamp(self.0.z) * 255.0).round() as u8;
         let ib = (clamp(self.0.y) * 255.0).round() as u8;
-        
-        println!("{} {} {}", ir, ig, ib)
+
+        format!("{} {} {}\n", ir, ig, ib)
     }
 
     pub fn scale(&self, scale_factor: f64) -> Self {

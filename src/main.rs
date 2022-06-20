@@ -13,6 +13,9 @@ use ray::*;
 use object::*;
 use camera::*;
 
+use std::fs::File;
+use std::io::{prelude::*, BufWriter};
+
 fn div_by(x:i32) -> impl Fn(i32) -> f64 + 'static {
     move |y: i32| (y as f64 / x as f64)
 }
@@ -44,17 +47,17 @@ fn ray_colour(r: Ray<f64>, environment: &Vec<Box<dyn Object>>) -> Color {
     gradient(WHITE, Color::new(0.5,0.7,1.0), t)
 }
 
-fn render(image_width: i32, samples_per_pixel: i32, camera: &Camera, environment: &Vec<Box<dyn Object>>) {
+fn render<T: Write>(image_width: i32, samples_per_pixel: i32, camera: &Camera, environment: &Vec<Box<dyn Object>>, output: &mut T) -> std::io::Result<()> {
     let image_height = (image_width as f64 / camera.aspect_ratio) as i32;
-
-    println!("P3\n{} {}\n255\n", image_width, image_height);
 
     let mut gen = rand_pcg::Pcg64Mcg::new(0xcafef00dd15ea5e5);
 
     let rand_float_between_0_and_1 = rand::distributions::Uniform::new(0.0,1.0);
+
+    output.write(format!("P3\n{} {}\n255\n", image_width, image_height).as_bytes())?;
     
     for (j,v) in (0..image_height).rev().map(div_by(image_height - 1)).enumerate() {
-        eprintln!("Scanlines remaining {}", image_height as usize - j);
+        println!("Scanlines remaining {}", image_height as usize - j);
       
         for u in (0..image_width).map(div_by(image_width-1)) {   
             let mut pixel_colour = Color::new(0.0,0.0,0.0);
@@ -68,19 +71,26 @@ fn render(image_width: i32, samples_per_pixel: i32, camera: &Camera, environment
                 pixel_colour += ray_colour(this_ray, &environment);
             }
 
-            pixel_colour.scale(1.0/samples_per_pixel as f64).write_color();
+            output.write(
+                pixel_colour.scale(1.0/samples_per_pixel as f64).write_color().as_bytes()
+            )?;
         }
     }
+
+    Ok(())
 }
 
 
-fn main() {
+fn main() -> std::io::Result<()> {
     use sphere::*;
     use plane::*;
     use camera::*;
 
     let camera = default_camera();
 
+    let file = File::create("image.ppm")?;
+
+    let mut file_writer = BufWriter::new(file);
     
     let environment: Vec<Box<dyn Object>> =
     vec![ Box::new(Sphere { radius: 0.5, centre: Vec3::new(0.0, 0.0, -1.0) })
@@ -89,7 +99,9 @@ fn main() {
         ];
     
 
-    render(700, 16, &camera, &environment)
+    render(700, 16, &camera, &environment, &mut file_writer)?;
+
+    Ok(())
 
     
 }
