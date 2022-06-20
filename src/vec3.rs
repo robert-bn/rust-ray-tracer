@@ -63,18 +63,24 @@ where T: Mul<Output = T> + Add<Output = T> + Copy
         self.dot(self)
     }
 
-    pub fn scale(&self, other: T) -> Self {
-        let new_x = self.x * other;
-        let new_y = self.y * other;
-        let new_z = self.z * other;
-        
-        Vec3::new(new_x, new_y, new_z)
-    }
-
     pub fn dot(&self, other: &Self) -> T {
         self.x * other.x +
         self.y * other.y +
         self.z * other.z
+    }
+}
+
+impl<T> Mul<T> for Vec3<T>
+where T: Mul<Output = T> + Copy
+{
+    type Output = Self;
+
+    fn mul(self, other: T) -> Self::Output {
+        let new_x = self.x * other;
+        let new_y = self.y * other;
+        let new_z = self.z * other;
+
+        Vec3::new(new_x, new_y, new_z)
     }
 }
 

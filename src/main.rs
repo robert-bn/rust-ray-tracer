@@ -18,7 +18,9 @@ use std::io::{prelude::*, BufWriter};
 
 
 
-const MAX_BOUNCES: u64 = 5;
+const MAX_BOUNCES: u64 = 50;
+const IMAGE_WIDTH: u64 = 400;
+const SAMPLES_PER_PIXEL: u64 = 100;
 
 
 fn ray_colour<R: Rng>(r: Ray<f64>, environment: &Vec<Box<dyn Object>>, depth: u64, rng: &mut R) -> Color {
@@ -28,42 +30,47 @@ fn ray_colour<R: Rng>(r: Ray<f64>, environment: &Vec<Box<dyn Object>>, depth: u6
     // maximum bounces exceeded
     if depth == 0 { return BLACK }
 
-    let mut ts: Vec<(f64, &Box<dyn Object>)> =
-        environment
-            .iter()
-            .flat_map(|obj| { 
-                let t = obj.intersection(&r)?;
-                Some(()).filter(|()| t >= 0.0)?;
-                Some((t,obj))
-            })
-            .collect();
+    let hit: Option<(f64, &Box<dyn Object>)> = environment
+        .iter()
+        .flat_map(|obj| obj.intersection(&r).and_then(|t| (t >= 0.0).then(|| (t,obj))))
+        .min_by(|(x,_), (y,_)| f64::partial_cmp(&x,&y).expect("Couldn't sort f64 in hits"));
 
-    ts.sort_by(|(x,_), (y,_)| f64::partial_cmp(&x,&y).expect("Couldn't sort f64 in ts"));
-
-    for (t, obj) in ts {
-        let intersection = r.at(t);
-        let n = obj.normal(&intersection);
-        let scatter_direction = n + unit::random(rng);
-        let new_ray = Ray { origin: intersection, direction: scatter_direction };
-        return ray_colour(new_ray, environment, depth - 1, rng).on_vec(|v| v.scale(0.5));
+    match hit {
+        Some((t, obj)) => {
+            let intersection = r.at(t);
+            let n = obj.normal(&intersection);
+            let scatter_direction = n + unit::random(rng);
+            let new_ray = Ray { origin: intersection, direction: scatter_direction };
+            ray_colour(new_ray, environment, depth - 1, rng).on_vec(|v| v / 2.0)
+        },
+        None => {
+            let direction = unit::in_direction(r.direction);
+            let t = (1.0 + direction.y)/2.0;
+            gradient(WHITE, Color::new(0.5,0.7,1.0), t)
+        }
     }
-
-    let direction = unit::in_direction(r.direction);
-    let t = (1.0 + direction.y)/2.0;
-
-    gradient(WHITE, Color::new(0.5,0.7,1.0), t)
 }
 
-fn render<T: Write>(image_width: i32, samples_per_pixel: i32, camera: &Camera, environment: &Vec<Box<dyn Object>>, output: &mut T) -> std::io::Result<()> {
-    fn div_by(x:i32) -> impl Fn(i32) -> f64 + 'static {
-        move |y: i32| (y as f64 / x as f64)
+fn render<T: Write>(
+    image_width: u64,
+    samples_per_pixel: u64,
+    max_bounces: u64,
+    camera: &Camera,
+    environment: &Vec<Box<dyn Object>>,
+    output: &mut T
+) -> std::io::Result<()> {
+    fn div_by(x:u64) -> impl Fn(u64) -> f64 + 'static {
+        move |y: u64| (y as f64 / x as f64)
     }
 
-    let image_height = (image_width as f64 / camera.aspect_ratio) as i32;
+    let image_height = (image_width as f64 / camera.aspect_ratio) as u64;
 
     let mut rng = rand_pcg::Pcg64Mcg::new(0xcafef00dd15ea5e5);
 
-    let dist = rand::distributions::Uniform::new(-1.0,1.0);
+    let v_jitter_dist = rand::distributions::Uniform::new(-1.0/image_height as f64,1.0/image_height as f64);
+    let h_jitter_dist = rand::distributions::Uniform::new(-1.0/image_width as f64,1.0/image_width as f64);
+
+    let samples_per_pixel_f64 = samples_per_pixel as f64;
 
     output.write(format!("P3\n{} {}\n255\n", image_width, image_height).as_bytes())?;
     
@@ -71,19 +78,19 @@ fn render<T: Write>(image_width: i32, samples_per_pixel: i32, camera: &Camera, e
         println!("Scanlines remaining {}", image_height as usize - j);
       
         for u in (0..image_width).map(div_by(image_width-1)) {   
-            let mut pixel_colour = Color::new(0.0,0.0,0.0);
+            let mut pixel_colour = BLACK;
 
             for _ in 1..=samples_per_pixel {
-                let v_jitter: f64 = dist.sample(&mut rng)/((2*image_height) as f64);
-                let h_jitter: f64 = dist.sample(&mut rng)/((2*image_width) as f64);
+                let v_jitter: f64 = v_jitter_dist.sample(&mut rng);
+                let h_jitter: f64 = h_jitter_dist.sample(&mut rng);
 
                 let this_ray = camera.get_ray(u + h_jitter, v + v_jitter);
                 
-                pixel_colour += ray_colour(this_ray, &environment, MAX_BOUNCES, &mut rng);
+                pixel_colour += ray_colour(this_ray, &environment, max_bounces, &mut rng);
             }
 
             output.write(
-                pixel_colour.on_vec(|v| v.inv_scale(samples_per_pixel as f64)).write_color().as_bytes()
+                pixel_colour.on_vec(|v| v / samples_per_pixel_f64).write_color().as_bytes()
             )?;
         }
     }
@@ -110,7 +117,7 @@ fn main() -> std::io::Result<()> {
         ];
     
 
-    render(700, 16, &camera, &environment, &mut file_writer)?;
+    render(IMAGE_WIDTH, SAMPLES_PER_PIXEL, MAX_BOUNCES, &camera, &environment, &mut file_writer)?;
 
     Ok(())
 

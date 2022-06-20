@@ -16,6 +16,6 @@ impl<T> Ray<T> {
             + Mul<Output = T> 
             + Copy
     {
-        self.origin + self.direction.scale(t)
+        self.origin + (self.direction * t)
     }
 }
