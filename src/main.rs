@@ -7,7 +7,7 @@ mod plane;
 mod camera;
 
 use color::*;
-use rand::prelude::Distribution;
+use rand::{Rng, prelude::*};
 use vec3::*;
 use ray::*;
 use object::*;
@@ -16,9 +16,18 @@ use camera::*;
 use std::fs::File;
 use std::io::{prelude::*, BufWriter};
 
-fn ray_colour(r: Ray<f64>, environment: &Vec<Box<dyn Object>>) -> Color {
+
+
+const MAX_BOUNCES: u64 = 5;
+
+
+fn ray_colour<R: Rng>(r: Ray<f64>, environment: &Vec<Box<dyn Object>>, depth: u64, rng: &mut R) -> Color {
     // check if ray intersects an object in the environment
     // Note that we return the first intersection found. This assumes there are no overlapping objects
+
+    // maximum bounces exceeded
+    if depth == 0 { return BLACK }
+
     let mut ts: Vec<(f64, &Box<dyn Object>)> =
         environment
             .iter()
@@ -34,7 +43,9 @@ fn ray_colour(r: Ray<f64>, environment: &Vec<Box<dyn Object>>) -> Color {
     for (t, obj) in ts {
         let intersection = r.at(t);
         let n = obj.normal(&intersection);
-        return Color::from_unit(n);
+        let scatter_direction = n + unit::random(rng);
+        let new_ray = Ray { origin: intersection, direction: scatter_direction };
+        return ray_colour(new_ray, environment, depth - 1, rng).on_vec(|v| v.scale(0.5));
     }
 
     let direction = unit::in_direction(r.direction);
@@ -50,9 +61,9 @@ fn render<T: Write>(image_width: i32, samples_per_pixel: i32, camera: &Camera, e
 
     let image_height = (image_width as f64 / camera.aspect_ratio) as i32;
 
-    let mut gen = rand_pcg::Pcg64Mcg::new(0xcafef00dd15ea5e5);
+    let mut rng = rand_pcg::Pcg64Mcg::new(0xcafef00dd15ea5e5);
 
-    let rand_float_between_0_and_1 = rand::distributions::Uniform::new(0.0,1.0);
+    let dist = rand::distributions::Uniform::new(-1.0,1.0);
 
     output.write(format!("P3\n{} {}\n255\n", image_width, image_height).as_bytes())?;
     
@@ -63,16 +74,16 @@ fn render<T: Write>(image_width: i32, samples_per_pixel: i32, camera: &Camera, e
             let mut pixel_colour = Color::new(0.0,0.0,0.0);
 
             for _ in 1..=samples_per_pixel {
-                let v_jitter: f64 = rand_float_between_0_and_1.sample(&mut gen)/(image_height as f64);
-                let h_jitter: f64 = rand_float_between_0_and_1.sample(&mut gen)/(image_width  as f64);
+                let v_jitter: f64 = dist.sample(&mut rng)/((2*image_height) as f64);
+                let h_jitter: f64 = dist.sample(&mut rng)/((2*image_width) as f64);
 
                 let this_ray = camera.get_ray(u + h_jitter, v + v_jitter);
                 
-                pixel_colour += ray_colour(this_ray, &environment);
+                pixel_colour += ray_colour(this_ray, &environment, MAX_BOUNCES, &mut rng);
             }
 
             output.write(
-                pixel_colour.scale(1.0/samples_per_pixel as f64).write_color().as_bytes()
+                pixel_colour.on_vec(|v| v.inv_scale(samples_per_pixel as f64)).write_color().as_bytes()
             )?;
         }
     }

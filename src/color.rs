@@ -12,7 +12,7 @@ impl Color {
 
     pub fn from_unit(n: Vec3<f64>) -> Self {
         // Create a colour from a unit vector, where x,y,z in range [-1,1] are mapped onto [0,1] for r,g,b
-        Color::new(n.x + 1.0, n.y + 1.0, n.z + 1.0).scale(0.5)
+        Color::new(n.x + 1.0, n.y + 1.0, n.z + 1.0).on_vec(|v| v.scale(0.5))
     }
     
     pub fn write_color(&self) -> String {
@@ -27,14 +27,16 @@ impl Color {
         format!("{} {} {}\n", ir, ig, ib)
     }
 
-    pub fn scale(&self, scale_factor: f64) -> Self {
-        Color(self.0.scale(scale_factor))
+    pub fn on_vec<F>(&self, f: F) -> Self
+        where F: FnOnce(Vec3<f64>) -> Vec3<f64>
+    {
+        Color(f(self.0))
     }
 }
 
 pub fn gradient(from: Color, to: Color, t: f64) -> Color {
     // linear blend between two colours paramizted by t in range [0.0,1.0]
-    from.scale(1.0 - t) + to.scale(t)
+    from.on_vec(|v| v.scale(1.0 - t)) + to.on_vec(|v| v.scale(t))
 }
 
 impl Add for Color {
