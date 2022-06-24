@@ -25,15 +25,6 @@ const FLOATING_POINT_TOLERANCE: f64 = 0.0001;
 
 
 fn ray_colour<R: Rng>(incoming_ray: Ray<f64>, environment: &Vec<Box<dyn Object>>, depth: u64, rng: &mut R) -> Color {
-    fn scatter<R: Rng>(intersection: Vec3<f64>, unit_normal: Vec3<f64>, rng: &mut R) -> Ray<f64> {
-        let scatter_direction = unit_normal + unit::random(rng);
-        Ray { origin: intersection, direction: scatter_direction }
-    }
-
-    fn reflect(intersection: Vec3<f64>, unit_normal: Vec3<f64>, incoming_ray: Ray<f64>) -> Ray<f64> {
-        let reflected_direction = incoming_ray.direction - (unit_normal * 2.0 * incoming_ray.direction.dot(&unit_normal));
-        Ray { origin: intersection, direction: reflected_direction }
-    }
     // check if ray intersects an object in the environment
     // Note that we return the first intersection found. This assumes there are no overlapping objects
 
@@ -48,14 +39,16 @@ fn ray_colour<R: Rng>(incoming_ray: Ray<f64>, environment: &Vec<Box<dyn Object>>
     match hit {
         Some((t, obj)) => {
             let intersection = incoming_ray.at(t);
-            let n = obj.normal(&intersection);
+            let unit_normal = obj.normal(&intersection);
             match obj.material().interact(rng) {
                 Interaction::Reflect => {
-                    let outgoing_ray = reflect(intersection, n, incoming_ray);
+                    let reflected_direction = incoming_ray.direction - (unit_normal * 2.0 * incoming_ray.direction.dot(&unit_normal));
+                    let outgoing_ray = Ray { origin: intersection, direction: reflected_direction };
                     ray_colour(outgoing_ray, environment, depth - 1, rng)
                 },
                 Interaction::Scatter => {
-                    let outgoing_ray = scatter(intersection, n, rng);
+                    let scatter_direction = unit_normal + unit::random(rng);
+                    let outgoing_ray = Ray { origin: intersection, direction: scatter_direction };
                     ray_colour(outgoing_ray, environment, depth - 1, rng).absorb(&obj.material().absorb)
                 }
             }
@@ -128,10 +121,10 @@ fn main() -> std::io::Result<()> {
     let mut file_writer = BufWriter::new(file);
     
     let environment: Vec<Box<dyn Object>> =
-    vec![ Box::new(Sphere { radius: 0.5,   centre: Vec3::new(-0.5,    0.0, -1.0), material: Material { reflection_prob: 0.8,   /* scatter_prob: 0.0, */ absorb: GREY_50   } })
-        , Box::new(Sphere { radius: 0.5,   centre: Vec3::new( 0.5,    0.0, -1.0), material: Material { reflection_prob: 0.0, /* scatter_prob: 1.0, */ absorb: Color::from_absorbtion(0.3,0.8,0.8) } })
-        , Box::new(Sphere { radius: 0.17,   centre: Vec3::new( 0.0,   -0.35, -0.69), material: Material { reflection_prob: 0.4, /* scatter_prob: 1.0, */ absorb: Color::from_absorbtion(0.9,0.6,0.9) } })
-        , Box::new(Sphere { radius: 100.0, centre: Vec3::new( 0.0, -100.5, -1.0), material: Material { reflection_prob: 0.0, /* scatter_prob: 1.0, */ absorb: GREY_50 } })
+    vec![ Box::new(Sphere { radius: 0.5,   centre: Vec3::new(-0.5,    0.0,  -1.0), material: Material { reflection_prob: 0.8, /* scatter_prob: 0.0, */ absorb: GREY_50   } })
+        , Box::new(Sphere { radius: 0.5,   centre: Vec3::new( 0.5,    0.0,  -1.0), material: Material { reflection_prob: 0.0, /* scatter_prob: 1.0, */ absorb: Color::from_absorbtion(0.3,0.8,0.8) } })
+        , Box::new(Sphere { radius: 0.17,  centre: Vec3::new( 0.0,  -0.35, -0.69), material: Material { reflection_prob: 0.4, /* scatter_prob: 1.0, */ absorb: Color::from_absorbtion(0.9,0.6,0.9) } })
+        , Box::new(Sphere { radius: 100.0, centre: Vec3::new( 0.0, -100.5,  -1.0), material: Material { reflection_prob: 0.0, /* scatter_prob: 1.0, */ absorb: GREY_50 } })
         // , Box::new(Plane::new(unit::Y, -0.1))
         ];
     
