@@ -1,4 +1,6 @@
 use std::ops::{Neg, Add, Sub, Mul, Div, AddAssign, SubAssign, MulAssign, DivAssign};
+use rand::{Rng, distributions::Uniform, prelude::*};
+
 
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub struct Vec3<T> {
@@ -11,7 +13,6 @@ pub struct Vec3<T> {
 
 pub mod unit {
     use super::*;
-    use rand::{Rng, distributions::Uniform, prelude::*};
 
     pub const X: Vec3<f64> = Vec3::new(1.0,0.0,0.0);
     pub const Y: Vec3<f64> = Vec3::new(0.0,1.0,0.0);
@@ -21,31 +22,45 @@ pub mod unit {
         v.inv_scale(v.length())
     }
 
-    // randomly oriented vector (uniformly distributed over surface of unit sphere)
+    // randomly oriented unit vector (uniformly distributed over surface of unit sphere)
     pub fn random<R: Rng>(rng: &mut R) -> Vec3<f64> {
-        // Accept/reject algorithm. I think this is the fastest, since deterministic
-        // algorithms require trignometric functions, which are ~10 time slower than
-        // addition/multiplication. However, this may be improved by caching results
-        // and approximating trig functions with table lookups.
-        // 
-        // There are other algorithms, such as sampling x,y,z from normal distributions
-        // and scaling to unit length, however sampling from a normal distribution is
-        // usually implemented by averaging over a number of uniform samples, so is
-        // obviously slower than a basic uniform sample. This may require some further
-        // research.
-        let dist: Uniform<f64> = Uniform::new(-1.0,1.0);
+        in_direction(super::random_in_unit_sphere(rng))
+    }
+}
 
-        loop {
-            let x: f64 = dist.sample(rng);
-            let y: f64 = dist.sample(rng);
-            let z: f64 = dist.sample(rng);
 
-            let vec = Vec3::new(x,y,z);
+// randomly oriented vector uniformly distributed over unit sphere
+pub fn random_in_unit_sphere<R: Rng>(rng: &mut R) -> Vec3<f64> {
+    // Accept/reject algorithm. I think this is the fastest, since deterministic
+    // algorithms require trignometric functions, which are ~10 time slower than
+    // addition/multiplication. However, this may be improved by caching results
+    // and approximating trig functions with table lookups.
+    // 
+    // There are other algorithms, such as sampling x,y,z from normal distributions
+    // and scaling to unit length, however sampling from a normal distribution is
+    // usually implemented by averaging over a number of uniform samples, so is
+    // obviously slower than a basic uniform sample. This may require some further
+    // research.
+    let dist: Uniform<f64> = Uniform::new(-1.0,1.0);
 
-            if vec.length_squared() < 1.0 {
-                return in_direction(vec);
-            }
+    loop {
+        let x: f64 = dist.sample(rng);
+        let y: f64 = dist.sample(rng);
+        let z: f64 = dist.sample(rng);
+
+        let vec = Vec3::new(x,y,z);
+
+        if vec.length_squared() < 1.0 {
+            return vec;
         }
+    }
+}
+
+
+impl Vec3<f64> {
+    pub fn near_zero(self) -> bool {
+        let tol = 1e-8;
+        self.x < tol && self.y < tol && self.z < tol
     }
 }
 

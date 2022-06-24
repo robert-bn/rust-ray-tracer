@@ -1,3 +1,4 @@
+use crate::color;
 use crate::vec3::*;
 use crate::ray::*;
 
@@ -18,7 +19,7 @@ impl Camera {
                 + (self.vertical * v)
                 - self.origin;
         
-        Ray { origin:self.origin, direction }
+        Ray { origin:self.origin, direction, color: color::WHITE }
     }
 }
 

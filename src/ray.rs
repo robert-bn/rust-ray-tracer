@@ -1,11 +1,12 @@
 use std::ops::{Mul, Add};
 
-use crate::vec3::Vec3;
+use crate::{vec3::Vec3, color::Color};
 
 #[derive(Debug)]
 pub struct Ray<T> {
     pub origin: Vec3<T>,
-    pub direction: Vec3<T>
+    pub direction: Vec3<T>,
+    pub color: Color
 }
 
 impl<T> Ray<T> {

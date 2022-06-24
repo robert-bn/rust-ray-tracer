@@ -1,4 +1,4 @@
-use std::ops::{Add, AddAssign};
+use std::ops::{Add, AddAssign, Mul};
 
 use crate::vec3::Vec3;
 
@@ -41,12 +41,8 @@ impl Color {
         Color(f(self.0))
     }
 
-    pub fn absorb(self, other: &Color) -> Self {
-        let new_r = self.r() * other.r();
-        let new_g = self.g() * other.g();
-        let new_b = self.b() * other.b();
-
-        Color::new(new_r, new_g, new_b)
+    pub fn weight(&self) -> f64 {
+        self.b().max(self.r()).max(self.g())
     }
 }
 
@@ -71,11 +67,25 @@ impl AddAssign for Color
     }
 }
 
+impl Mul for Color {
+    type Output = Self;
+
+    fn mul(self, other: Color) -> Self::Output {
+        let new_r = self.r() * other.r();
+        let new_g = self.g() * other.g();
+        let new_b = self.b() * other.b();
+
+        Color::new(new_r, new_g, new_b)
+    }
+}
+
 
 pub const WHITE: Color = Color::new(1.0,1.0,1.0);
 pub const BLACK: Color = Color::new(0.0,0.0,0.0);
 pub const RED:   Color = Color::new(1.0,0.0,0.0);
 pub const GREEN: Color = Color::new(0.0,1.0,0.0);
 pub const BLUE:  Color = Color::new(0.0,0.0,1.0);
+pub const GREY_20: Color = Color::new(0.5,0.5,0.5);
 pub const GREY_50: Color = Color::new(0.5,0.5,0.5);
+pub const GREY_80: Color = Color::new(0.5,0.5,0.5);
 
