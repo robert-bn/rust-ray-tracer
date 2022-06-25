@@ -18,8 +18,8 @@ use std::io::{prelude::*, BufWriter};
 
 
 
-const MAX_BOUNCES: u64 = 8;
-const IMAGE_WIDTH: u64 = 800;
+const MAX_BOUNCES: u64 = 50;
+const IMAGE_WIDTH: u64 = 400;
 const SAMPLES_PER_PIXEL: u64 = 100;
 const SHADOW_ACNE_TOLERANCE: f64 = 0.0001;
 const KILLING_WEIGHT: f64 = 1.0 / 255.0;
@@ -107,14 +107,14 @@ fn main() -> std::io::Result<()> {
 
     let mut file_writer = BufWriter::new(file);
 
-    let material_ground = Material::Diffuse { absorb: Color::new(0.8, 0.8, 0.0) };
-    let material_center = Material::Diffuse { absorb: Color::new(0.7, 0.3, 0.3) };
-    let material_left   = Material::Reflective { absorb: Color::new(0.8, 0.8, 0.8), roughness:0.3 };
-    let material_right  = Material::Reflective { absorb: Color::new(0.8, 0.6, 0.2), roughness:1.0 };
-    
+    let material_ground = Material::Diffuse    { absorb: Color::new(0.8, 0.8, 0.0) };
+    let material_left   = Material::Dialectric { roughness: 0.0, refractive_index: 1.5, absorb: WHITE };
+    let material_center = Material::Diffuse { absorb: Color::new(0.1, 0.2, 0.5) };
+    let material_right  = Material::Reflective { absorb: Color::new(0.8, 0.6, 0.2), roughness: 0.0 };
+
     let environment: Vec<Box<dyn Object>> =
-    vec![ Box::new(Sphere { radius: 0.5,   centre: Vec3::new(-0.0,   0.0,  -1.0), material: material_center })
-        , Box::new(Sphere { radius: 0.5,   centre: Vec3::new(-1.0,   0.0,  -1.0), material: material_left   })
+    vec![ Box::new(Sphere { radius: 0.5,   centre: Vec3::new(-1.0,   0.0,  -1.0), material: material_left })
+        , Box::new(Sphere { radius: 0.5,   centre: Vec3::new( 0.0,   0.0,  -1.0), material: material_left   })
         , Box::new(Sphere { radius: 0.5,   centre: Vec3::new( 1.0,   0.0,  -1.0), material: material_right  })
         , Box::new(Sphere { radius: 100.0, centre: Vec3::new( 0.0,-100.5,  -1.0), material: material_ground })
         ];    
