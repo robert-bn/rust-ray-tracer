@@ -21,7 +21,7 @@ use std::io::{prelude::*, BufWriter};
 const MAX_BOUNCES: u64 = 50;
 const IMAGE_WIDTH: u64 = 400;
 const SAMPLES_PER_PIXEL: u64 = 100;
-const SHADOW_ACNE_TOLERANCE: f64 = 0.0001;
+const SHADOW_ACNE_TOLERANCE: f64 = 0.001;
 const KILLING_WEIGHT: f64 = 1.0 / 255.0;
 
 
@@ -98,7 +98,7 @@ fn render<T: Write>(
 
 fn main() -> std::io::Result<()> {
     use sphere::*;
-    // use plane::*;
+    use plane::*;
     use camera::*;
 
     let camera = default_camera();
@@ -110,16 +110,22 @@ fn main() -> std::io::Result<()> {
     let material_ground = Material::Diffuse    { absorb: Color::new(0.8, 0.8, 0.0) };
     let material_left   = Material::Dialectric { roughness: 0.0, refractive_index: 1.5, absorb: WHITE };
     let material_center = Material::Diffuse { absorb: Color::new(0.1, 0.2, 0.5) };
-    let material_right  = Material::Reflective { absorb: Color::new(0.8, 0.6, 0.2), roughness: 0.0 };
+    let material_right  = Material::Reflective { absorb: Color::new(0.8, 0.6, 0.2), roughness: 1.0 };
 
-    let environment: Vec<Box<dyn Object>> =
-    vec![ Box::new(Sphere { radius: 0.5,   centre: Vec3::new(-1.0,   0.0,  -1.0), material: material_left })
+    let environment: Vec<Box<dyn Object>> = vec!
+        [ Box::new(Sphere { radius: 0.5,   centre: Vec3::new(-1.0,   0.0,  -1.0), material: material_left })
         , Box::new(Sphere { radius: 0.5,   centre: Vec3::new( 0.0,   0.0,  -1.0), material: material_left   })
         , Box::new(Sphere { radius: 0.5,   centre: Vec3::new( 1.0,   0.0,  -1.0), material: material_right  })
         , Box::new(Sphere { radius: 100.0, centre: Vec3::new( 0.0,-100.5,  -1.0), material: material_ground })
         ];    
 
-    render(IMAGE_WIDTH, SAMPLES_PER_PIXEL, MAX_BOUNCES, &camera, &environment, &mut file_writer)?;
+    /* let environment: Vec<Box<dyn Object>> = vec!
+        [ Box::new(Sphere { radius: 0.5,   centre: Vec3::new( 0.0,   0.0,  -1.0), material: material_left   })
+        , Box::new(Plane::new(unit::Y, Vec3::new(0.0,-0.5,0.0), material_ground))
+        ];
+     */    
+
+    render(IMAGE_WIDTH, 100, MAX_BOUNCES, &camera, &environment, &mut file_writer)?;
 
     Ok(())
 

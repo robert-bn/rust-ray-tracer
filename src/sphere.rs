@@ -1,6 +1,7 @@
 use crate::vec3::*;
 use crate::ray::*;
 use crate::object::*;
+use super::SHADOW_ACNE_TOLERANCE;
 
 #[derive(Debug)]
 pub struct Sphere {
@@ -8,17 +9,6 @@ pub struct Sphere {
     pub centre: Vec3<f64>,
     pub material: Material
 }
-
-pub fn intersects(sphere: &Sphere, ray: &Ray<f64>) -> bool {
-    let v_origin_centre = ray.origin - sphere.centre;
-
-    let a = ray.direction.length_squared();
-    let b = 2.0 * ray.direction.dot(&v_origin_centre);
-    let c = v_origin_centre.length_squared() - sphere.radius*sphere.radius;
-
-    b * b >= 4.0 * a * c
-}
-
 
 impl Object for Sphere {
     fn intersection(&self, ray: &Ray<f64>) -> Option<f64> {
@@ -49,7 +39,7 @@ impl Object for Sphere {
         // In this case we want the positive intersection which should be IN FRONT of the
         // camera, and the negative one behind it.
     
-        match (t_0 > 0.0, t_1 > 0.0) {
+        match (t_0 > SHADOW_ACNE_TOLERANCE, t_1 > SHADOW_ACNE_TOLERANCE) {
             (true, _)      => Some(t_0),
             (false, true)  => Some(t_1),
             (false, false) => None,
