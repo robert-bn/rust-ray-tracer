@@ -9,16 +9,16 @@ const AIR_REFRACTIVE_INDEX: f64 = 1.0;
 #[derive(Debug,Clone,Copy)]
 pub enum Material {
     Diffuse { absorb: Color },
-    Reflective { absorb: Color, roughness: f64 },
-    Dialectric { absorb: Color, roughness: f64, refractive_index: f64 }
+    Reflective { roughness: f64, absorb: Color },
+    Dialectric { roughness: f64, refractive_index: f64 }
 }
 
 impl Material {
     pub fn absorb(self) -> Color {
         match self {
             Material::Diffuse { absorb } => absorb,
-            Material::Reflective { absorb, roughness: _ } => absorb,
-            Material::Dialectric { absorb, roughness: _, refractive_index: _ } => absorb,
+            Material::Reflective { absorb, roughness:_ } => absorb,  
+            Material::Dialectric { roughness: _, refractive_index: _ } => WHITE, // Total internal reflection - acts like perfect mirror
         }
     }
 }
@@ -49,7 +49,7 @@ pub fn interact<R: Rng>(obj: &Box<dyn Object>, incoming_ray: Ray<f64>, t:f64, rn
             Ray { origin: intersection, direction: outgoing_direction, color: incoming_ray.color * absorb }
         },
         Material::Reflective { absorb, roughness } => reflect(absorb, roughness, rng),
-        Material::Dialectric { absorb, roughness, refractive_index } => {
+        Material::Dialectric { roughness, refractive_index } => {
             let incoming_dot_normal = incoming_ray.direction.dot(&unit_normal);
             let inside_material = incoming_dot_normal > 0.0;
             let unit_perp = unit_normal * f64::signum(incoming_dot_normal);
@@ -69,7 +69,7 @@ pub fn interact<R: Rng>(obj: &Box<dyn Object>, incoming_ray: Ray<f64>, t:f64, rn
 
             if sin_t2_squared > 1.0 {
                 // Exceeded angle of total internal reflection, must reflect ray
-                reflect(absorb, roughness, rng)
+                reflect(WHITE, roughness, rng)
             } else {
                 let sin_t2 = f64::sqrt(sin_t2_squared);
                 let cos_t2 = f64::sqrt(1.0 - sin_t2_squared);
