@@ -50,7 +50,7 @@ pub fn random_in_unit_sphere<R: Rng>(rng: &mut R) -> Vec3<f64> {
 
         let vec = Vec3::new(x,y,z);
 
-        if vec.length_squared() < 1.0 {
+        if vec.length_squared() <= 1.0 {
             return vec;
         }
     }
@@ -60,7 +60,7 @@ pub fn random_in_unit_sphere<R: Rng>(rng: &mut R) -> Vec3<f64> {
 impl Vec3<f64> {
     pub fn near_zero(self) -> bool {
         let tol = 1e-8;
-        self.x < tol && self.y < tol && self.z < tol
+        self.x.abs() < tol && self.y.abs() < tol && self.z.abs() < tol
     }
 }
 
