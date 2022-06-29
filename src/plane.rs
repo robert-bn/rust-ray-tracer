@@ -5,13 +5,15 @@ use crate::ray::*;
 #[derive(Debug)]
 pub struct Plane {
     unit_normal: Vec3<f64>,
-    pub origin_distance: f64,
+    origin_distance: f64,
     material: Material
 }
 
 impl Plane {
-    pub fn new(normal: Vec3<f64>, origin_distance: f64, material: Material) -> Self {
-        Plane { unit_normal: unit::in_direction(normal), origin_distance, material }
+    pub fn new(normal: Vec3<f64>, point_in_plane: Vec3<f64>, material: Material) -> Self {
+        let unit_normal = unit::in_direction(normal);
+        let origin_distance = point_in_plane.dot(&unit_normal);
+        Plane { unit_normal, origin_distance, material }
     }
 }
 
